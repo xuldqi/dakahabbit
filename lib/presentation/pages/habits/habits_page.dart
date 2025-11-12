@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/models.dart';
 import '../../providers/habit_provider.dart';
 import '../../providers/check_in_provider.dart';
+import '../../widgets/feedback/check_in_celebration.dart';
+import '../../widgets/empty_states/recommended_habits_widget.dart';
 
 /// 习惯管理页面
 class HabitsPage extends ConsumerStatefulWidget {
@@ -163,10 +165,39 @@ class _HabitsPageState extends ConsumerState<HabitsPage> {
     final filteredHabits = _filterHabits(habitState.habits);
 
     if (filteredHabits.isEmpty) {
-      return Center(
+      if (_searchQuery.isNotEmpty || _selectedCategory != 'all') {
+        // 搜索或筛选无结果
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.search_off,
+                size: 64,
+                color: Colors.grey,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '没有找到符合条件的习惯',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '尝试调整筛选条件或搜索关键词',
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        );
+      }
+      
+      // 空状态 - 显示推荐习惯
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const SizedBox(height: 32),
             const Icon(
               Icons.track_changes,
               size: 64,
@@ -174,18 +205,22 @@ class _HabitsPageState extends ConsumerState<HabitsPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              _searchQuery.isNotEmpty || _selectedCategory != 'all'
-                  ? '没有找到符合条件的习惯'
-                  : '还没有习惯',
+              '还没有习惯',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
-              _searchQuery.isNotEmpty || _selectedCategory != 'all'
-                  ? '尝试调整筛选条件或搜索关键词'
-                  : '点击右下角按钮创建第一个习惯',
-              style: Theme.of(context).textTheme.bodyMedium,
+              '试试这些推荐习惯，开始你的习惯养成之旅',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[600],
+              ),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            RecommendedHabitsWidget(
+              title: '推荐习惯',
+              subtitle: '点击卡片快速创建',
+              onCreateHabit: () => context.go('/habit/create'),
             ),
           ],
         ),
@@ -366,12 +401,13 @@ class _HabitCard extends ConsumerWidget {
     final success = await checkInNotifier.checkIn(habit.id!);
     
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${habit.name} 打卡成功！'),
-          backgroundColor: Colors.green,
-        ),
+      final newStreak = (habit.streakCount) + 1;
+      await CheckInCelebration.show(
+        context,
+        habitName: habit.name,
+        streakCount: newStreak,
       );
+      ref.read(habitProvider.notifier).loadHabits();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

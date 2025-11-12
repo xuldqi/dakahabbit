@@ -7,6 +7,8 @@ import '../../../core/models/models.dart';
 import '../../providers/habit_provider.dart';
 import '../../providers/check_in_provider.dart';
 import '../../../app/app_router.dart';
+import '../../widgets/feedback/check_in_celebration.dart';
+import '../../widgets/empty_states/recommended_habits_widget.dart';
 
 /// 首页
 /// 显示今日习惯概览和快速操作
@@ -195,9 +197,19 @@ class _TodayHabitsSection extends ConsumerWidget {
         todayHabitsAsync.when(
           data: (habits) {
             if (habits.isEmpty) {
-              return const _PlaceholderMessage(
-                icon: Icons.track_changes,
-                message: '还没有习惯，点击右上角创建第一个习惯吧！',
+              return Column(
+                children: [
+                  const _PlaceholderMessage(
+                    icon: Icons.track_changes,
+                    message: '还没有习惯，试试这些推荐习惯吧！',
+                  ),
+                  const SizedBox(height: 24),
+                  RecommendedHabitsWidget(
+                    title: '',
+                    subtitle: '点击卡片快速创建',
+                    onCreateHabit: () => context.go('/habit/create'),
+                  ),
+                ],
               );
             }
             
@@ -267,14 +279,14 @@ class _HabitTile extends ConsumerWidget {
     final success = await checkInNotifier.checkIn(habit.id!);
     
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${habit.name} 打卡成功！'),
-          backgroundColor: Colors.green,
-        ),
+      final newStreak = (habit.streakCount) + 1;
+      await CheckInCelebration.show(
+        context,
+        habitName: habit.name,
+        streakCount: newStreak,
       );
-      // 刷新习惯数据
       ref.invalidate(todayHabitsProvider);
+      ref.read(habitProvider.notifier).loadHabits();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

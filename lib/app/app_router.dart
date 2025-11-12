@@ -22,6 +22,7 @@ import '../presentation/pages/settings/about_page.dart';
 import '../presentation/pages/onboarding/onboarding_page.dart';
 import '../presentation/pages/onboarding/welcome_page.dart';
 import '../presentation/widgets/common/main_screen.dart';
+import '../core/providers/onboarding_provider.dart';
 
 /// 路由名称常量
 class AppRoutes {
@@ -69,8 +70,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     
     // 路由守卫
     redirect: (context, state) {
-      // 这里可以添加认证检查、首次启动检查等逻辑
-      // 暂时返回null，表示不需要重定向
+      // 检查首次启动
+      final onboardingCompleted = ref.read(onboardingCompletedProvider);
+      
+      // 如果正在访问欢迎页或引导页，不需要重定向
+      if (state.uri.path == AppRoutes.welcome || 
+          state.uri.path == AppRoutes.onboarding) {
+        return null;
+      }
+      
+      // 如果首次启动未完成，重定向到欢迎页
+      // 注意：这里使用异步检查，实际应该使用 FutureProvider 或 StreamProvider
+      // 为了简化，我们让欢迎页和引导页可以正常访问，其他页面会检查
       return null;
     },
     
@@ -111,10 +122,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     
     // 路由定义
     routes: [
-      // 根路由 - 重定向到主页
+      // 根路由 - 检查首次启动
       GoRoute(
         path: AppRoutes.root,
-        redirect: (_, __) => AppRoutes.home,
+        builder: (context, state) {
+          return _InitialRouteHandler();
+        },
       ),
       
       // 欢迎页面
@@ -392,6 +405,51 @@ extension AppRouterExtension on GoRouter {
   
   /// 导航到编辑日志页面
   void goEditJournal(int journalId) => go('/journal/$journalId/edit');
+}
+
+/// 初始路由处理器
+/// 检查首次启动状态并重定向到相应页面
+class _InitialRouteHandler extends ConsumerWidget {
+  const _InitialRouteHandler();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final onboardingCompletedAsync = ref.watch(onboardingCompletedProvider);
+    
+    return onboardingCompletedAsync.when(
+      data: (completed) {
+        // 使用 WidgetsBinding 确保导航在下一帧执行
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (completed) {
+            context.go(AppRoutes.home);
+          } else {
+            context.go(AppRoutes.welcome);
+          }
+        });
+        return const Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      },
+      loading: () => const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (_, __) {
+        // 出错时默认跳转到主页
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          context.go(AppRoutes.home);
+        });
+        return const Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// GoRouter状态扩展
