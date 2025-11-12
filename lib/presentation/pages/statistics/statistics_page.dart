@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../providers/statistics_provider.dart';
 import '../../providers/habit_provider.dart';
 import '../../../app/app_colors.dart';
+import '../../../app/app_router.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 /// 统计分析页面
 class StatisticsPage extends ConsumerStatefulWidget {
@@ -34,6 +36,8 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
             _TrendChartCard(period: _selectedPeriod),
             const SizedBox(height: 16),
             const _WeeklyChartCard(),
+            const SizedBox(height: 16),
+            const _AchievementsPreviewCard(),
             const SizedBox(height: 16),
             const _AchievementsCard(),
           ],
@@ -536,6 +540,99 @@ class _WeeklyChartCard extends ConsumerWidget {
       default:
         return Colors.grey;
     }
+  }
+}
+
+class _AchievementsPreviewCard extends ConsumerWidget {
+  const _AchievementsPreviewCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final achievementsAsync = ref.watch(achievementProgressProvider);
+
+    return achievementsAsync.when(
+      data: (data) {
+        final completed = data['completed'] as int? ?? 0;
+        final total = data['total'] as int? ?? 0;
+        final completionRate = total == 0 ? 0.0 : completed / total;
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: const [
+                    Text(
+                      '成就进度',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$completed / $total',
+                            style:
+                                Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '已解锁的成就',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LinearProgressIndicator(
+                            value: completionRate,
+                            backgroundColor: Colors.grey[200],
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(height: 4),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Text('${(completionRate * 100).round()}%'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.go(AppRoutes.achievements),
+                    icon: const Icon(Icons.emoji_events),
+                    label: const Text('查看所有成就'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (error, stack) => const SizedBox.shrink(),
+    );
   }
 }
 

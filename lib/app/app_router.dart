@@ -9,6 +9,7 @@ import '../presentation/pages/habits/create_habit_page.dart';
 import '../presentation/pages/habits/edit_habit_page.dart';
 import '../presentation/pages/statistics/statistics_page.dart';
 import '../presentation/pages/statistics/habit_statistics_page.dart';
+import '../presentation/pages/achievements/achievements_page.dart';
 import '../presentation/pages/journals/journals_page.dart';
 import '../presentation/pages/journals/journal_detail_page.dart';
 import '../presentation/pages/journals/create_journal_page.dart';
@@ -36,6 +37,7 @@ class AppRoutes {
   static const String statistics = '/statistics';
   static const String journals = '/journals';
   static const String settings = '/settings';
+  static const String achievements = '/achievements';
   
   // 习惯相关页面
   static const String habitDetail = '/habit/:id';
@@ -185,6 +187,18 @@ final routerProvider = Provider<GoRouter>((ref) {
                 context,
                 state,
                 const StatisticsPage(),
+              );
+            },
+          ),
+
+          GoRoute(
+            path: AppRoutes.achievements,
+            name: 'achievements',
+            pageBuilder: (context, state) {
+              return _buildPageWithTransition(
+                context,
+                state,
+                const AchievementsPage(),
               );
             },
           ),
