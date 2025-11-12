@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'dart:convert';
+
 import '../../../core/models/models.dart';
 import '../../providers/habit_provider.dart';
 import '../../../app/app_colors.dart';
+import '../../widgets/reminder/reminder_setup_widget.dart';
 
 /// 创建习惯页面 - 分步表单
 class CreateHabitPage extends ConsumerStatefulWidget {
@@ -31,6 +34,9 @@ class _CreateHabitPageState extends ConsumerState<CreateHabitPage> {
   HabitImportance _importance = HabitImportance.medium;
   HabitDifficulty _difficulty = HabitDifficulty.medium;
   HabitCycleType _cycleType = HabitCycleType.daily;
+  
+  bool _reminderEnabled = false;
+  List<String> _reminderTimes = [];
   
   bool _isLoading = false;
 
@@ -210,6 +216,21 @@ class _CreateHabitPageState extends ConsumerState<CreateHabitPage> {
           ),
           const SizedBox(height: 24),
           _buildCycleTypeField(),
+          const SizedBox(height: 24),
+          ReminderSetupWidget(
+            initialEnabled: _reminderEnabled,
+            initialTimes: _reminderTimes,
+            onEnabledChanged: (enabled) {
+              setState(() {
+                _reminderEnabled = enabled;
+              });
+            },
+            onTimesChanged: (times) {
+              setState(() {
+                _reminderTimes = times;
+              });
+            },
+          ),
         ],
       ),
     );
@@ -278,6 +299,30 @@ class _CreateHabitPageState extends ConsumerState<CreateHabitPage> {
                   _buildConfirmItem('重要性', _getImportanceName(_importance)),
                   const Divider(),
                   _buildConfirmItem('难度', _getDifficultyName(_difficulty)),
+                  const Divider(),
+                  _buildConfirmItem(
+                    '提醒',
+                    _reminderEnabled
+                        ? '${_reminderTimes.length}个提醒时间'
+                        : '未开启',
+                  ),
+                  if (_reminderEnabled && _reminderTimes.isNotEmpty) ...[
+                    const Divider(),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _reminderTimes.map((time) {
+                          return Chip(
+                            label: Text(time),
+                            backgroundColor: AppColors.primary.withOpacity(0.1),
+                            labelStyle: TextStyle(color: AppColors.primary),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -666,6 +711,10 @@ class _CreateHabitPageState extends ConsumerState<CreateHabitPage> {
         importance: _importance,
         difficulty: _difficulty,
         cycleType: _cycleType,
+        reminderEnabled: _reminderEnabled,
+        reminderTimes: _reminderTimes.isNotEmpty
+            ? jsonEncode(_reminderTimes)
+            : null,
         startDate: DateTime.now(),
         isActive: true,
         createdAt: DateTime.now(),
